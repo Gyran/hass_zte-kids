@@ -1,0 +1,3 @@
+# HA already ships aiohttp + cryptography. Extra deps for local probe scripts only:
+python-dotenv>=1.0.0
+

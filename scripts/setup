@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+PYTHON_BIN="${PYTHON_BIN:-}"
+if [[ -z "$PYTHON_BIN" ]]; then
+  if command -v python3.14 >/dev/null 2>&1; then
+    PYTHON_BIN="$(command -v python3.14)"
+  elif [[ -x /opt/homebrew/opt/python@3.14/bin/python3.14 ]]; then
+    PYTHON_BIN=/opt/homebrew/opt/python@3.14/bin/python3.14
+  else
+    echo "Need Python 3.14+ for Home Assistant 2026.7." >&2
+    exit 1
+  fi
+fi
+
+if [[ ! -d .venv-ha ]]; then
+  "$PYTHON_BIN" -m venv .venv-ha
+fi
+# shellcheck disable=SC1091
+source .venv-ha/bin/activate
+python -m pip install --upgrade pip
+python -m pip install --requirement requirements_dev.txt

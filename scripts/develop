@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+if [[ ! -d .venv-ha ]]; then
+  echo "Run scripts/setup first." >&2
+  exit 1
+fi
+
+# shellcheck disable=SC1091
+source .venv-ha/bin/activate
+
+mkdir -p config
+if [[ ! -e config/custom_components ]]; then
+  ln -sfn ../custom_components config/custom_components
+fi
+
+if [[ ! -f config/.storage/core.config_entries ]]; then
+  hass --config "${PWD}/config" --script ensure_config
+fi
+
+export PYTHONPATH="${PYTHONPATH:-}:${PWD}/custom_components"
+exec hass --config "${PWD}/config" --debug

@@ -1,0 +1,40 @@
+# Secrets / local session
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+.venv-ha/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# Local Home Assistant config runtime (keep *.yaml.example tracked)
+config/.storage/
+config/.cache/
+config/.HA_VERSION
+config/home-assistant.log*
+config/home-assistant_v2.db*
+config/deps/
+config/tts/
+config/blueprints/
+config/.ha_run.lock
+config/custom_components
+config/configuration.yaml
+
+# Reverse-engineering workspace (apk, jadx, old CLIs, Bruno, …)
+# Keep only reverse_engineering/README.md in git.
+/reverse_engineering/**
+!/reverse_engineering/README.md
+
+# OS
+.DS_Store
+Thumbs.db

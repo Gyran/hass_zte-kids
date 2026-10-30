@@ -1,0 +1,62 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "ZTE Kids",
+        "description": "Sign in with the same account as the ZTE Kids / Nubia Care parent app. Password must be 8–16 characters.",
+        "data": {
+          "email": "Email",
+          "password": "Password",
+          "region": "Region",
+          "scan_interval": "Update interval"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate ZTE Kids",
+        "description": "Login failed. Enter the current password for {email}.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "auth": "Email or password is wrong.",
+      "password_format": "Password format rejected by the server (use 8–16 characters).",
+      "password_length": "Password must be between 8 and 16 characters.",
+      "connection": "Unable to connect to the ZTE Kids / Nubia Care API.",
+      "no_devices": "Login worked but no watches were found on this account.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This ZTE Kids account is already configured.",
+      "reauth_successful": "Re-authentication successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "ZTE Kids options",
+        "data": {
+          "scan_interval": "Update interval"
+        }
+      }
+    }
+  },
+  "entity": {
+    "device_tracker": {
+      "watch": {
+        "name": "Location"
+      }
+    },
+    "sensor": {
+      "battery": {
+        "name": "Battery"
+      }
+    },
+    "binary_sensor": {
+      "online": {
+        "name": "Online"
+      }
+    }
+  }
+}

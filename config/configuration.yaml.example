@@ -1,0 +1,14 @@
+# Copy to configuration.yaml for local HA development (or use the checked-in one).
+
+default_config:
+
+homeassistant:
+  debug: true
+  name: ZTE Kids Dev
+  unit_system: metric
+  time_zone: Europe/Stockholm
+
+logger:
+  default: info
+  logs:
+    custom_components.zte_kids: debug
