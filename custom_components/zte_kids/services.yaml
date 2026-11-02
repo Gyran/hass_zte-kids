@@ -7,5 +7,3 @@ refresh_location:
   target:
     entity:
       integration: zte_kids
-    device:
-      integration: zte_kids

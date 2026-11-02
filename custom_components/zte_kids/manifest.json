@@ -1,11 +1,11 @@
 {
   "domain": "zte_kids",
   "name": "ZTE Kids",
+  "categories": ["presence_location.trackers"],
   "codeowners": ["@gyran"],
   "config_flow": true,
   "documentation": "https://github.com/Gyran/hass_zte-kids",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Gyran/hass_zte-kids/issues",
-  "version": "0.2.0",
-  "categories": ["presence_location.trackers"]
+  "version": "0.2.0"
 }
