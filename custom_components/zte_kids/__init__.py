@@ -20,6 +20,7 @@ from .const import (
 )
 from .coordinator import ZteKidsDataUpdateCoordinator
 from .data import ZteKidsData
+from .services import async_setup_services, async_unload_services
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -30,6 +31,7 @@ PLATFORMS: list[Platform] = [
     Platform.DEVICE_TRACKER,
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
+    Platform.BUTTON,
 ]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -53,6 +55,7 @@ async def async_setup_entry(
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+    async_setup_services(hass)
     LOGGER.debug(
         "ZTE Kids setup for %s (%s devices)",
         entry.data.get(CONF_EMAIL),
@@ -72,4 +75,7 @@ async def async_unload_entry(
     hass: HomeAssistant, entry: ZteKidsConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok:
+        async_unload_services(hass, entry.entry_id)
+    return unload_ok

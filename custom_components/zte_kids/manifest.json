@@ -3,9 +3,9 @@
   "name": "ZTE Kids",
   "codeowners": ["@gyran"],
   "config_flow": true,
-  "documentation": "https://github.com/Gyran/hacs_zte_kids",
+  "documentation": "https://github.com/Gyran/hass_zte-kids",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/Gyran/hacs_zte_kids/issues",
-  "version": "0.1.0",
+  "issue_tracker": "https://github.com/Gyran/hass_zte-kids/issues",
+  "version": "0.2.0",
   "categories": ["presence_location.trackers"]
 }

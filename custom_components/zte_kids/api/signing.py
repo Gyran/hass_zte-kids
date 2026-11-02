@@ -41,6 +41,33 @@ def sha256_hex(s: str) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
 
 
+def signed_guard_params(
+    params_to_sign: dict[str, str],
+    *,
+    region: str,
+) -> dict[str, str]:
+    """Sign body fields. Return only sign, timestamp, nonce, and appKey.
+
+    Those four belong on the query string. The signed fields stay in the body.
+    """
+    rk = REGION_KEYS[region]
+    ts = str(int(time.time() * 1000))
+    nonce = uuid.uuid4().hex
+    merged = {
+        **params_to_sign,
+        "timestamp": ts,
+        "nonce": nonce,
+        "appKey": rk["app_key"],
+    }
+    sign = sha256_hex(build_sign_string(merged, rk["sign_secret_suffix"]))
+    return {
+        "sign": sign,
+        "timestamp": ts,
+        "nonce": nonce,
+        "appKey": rk["app_key"],
+    }
+
+
 def append_signed_query(
     base: str,
     path: str,

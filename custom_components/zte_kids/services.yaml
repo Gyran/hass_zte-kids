@@ -1,0 +1,11 @@
+refresh_location:
+  name: Refresh location
+  description: >-
+    Ask each selected watch for a fresh GPS fix. Watches are refreshed one
+    after another. Each one is polled for about 24 seconds, or until its
+    location timestamp changes.
+  target:
+    entity:
+      integration: zte_kids
+    device:
+      integration: zte_kids

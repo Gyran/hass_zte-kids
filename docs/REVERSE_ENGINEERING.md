@@ -34,7 +34,7 @@ Expect a large Java tree under `reverse_engineering/jadx_out/sources/`.
 | Request signing                   | `SecurityGuardRequestFilter`                      | Sorted `key=value&`… + secret suffix, SHA-256 hex; query: `sign`, `timestamp`, `nonce`, `appKey` |
 | Login API                         | `y3/a.java` → `api/account/login`                 | JSON body: `loginName`, encrypted `password`, `dypwdFlag`, `mobileType`; `need-token:false`      |
 | Related devices                   | Gateway `getway/accounts/{openid}/related-device` | Device list with nested `lastLocation`, `battery`, `onlineStatus`, `imei`                        |
-| Last location POST                | `getway/devices/{imei}/location/last`             | Often returns `{ "code": 0 }` with **no** lat/lon — prefer `lastLocation` on related-device      |
+| Last location POST                | `getway/devices/{imei}/location/last`             | Form body `imei`, `openid`, `accesstoken`. Query is only `sign`, `timestamp`, `nonce`, `appKey`. `code` 0 often has **no** lat/lon. The POST asks the watch for a fix; coordinates arrive on the next `related-device` `lastLocation`. |
 | MQTT defaults                     | `ka/b.java` / MQTT helpers                        | Broker/user/topic patterns exist; **not** used by the HA integration yet                         |
 
 Implemented client: [`custom_components/zte_kids/api/`](../custom_components/zte_kids/api/).
@@ -53,15 +53,19 @@ Implemented client: [`custom_components/zte_kids/api/`](../custom_components/zte
 
 ## 6. Home Assistant mapping
 
-Poll **related-device** only:
+Poll **related-device** for state. The refresh button and the `zte_kids.refresh_location` service also `POST` `location/last`, then poll until `lastLocation.timestamp` changes (about every 8s, give up around 24s). An unchanged timestamp is not an error. The service accepts a watch device or any entity on that watch.
 
-| Field                                 | Entity                 |
-| ------------------------------------- | ---------------------- |
-| `lastLocation.lat` / `lon` / `radius` | `device_tracker`       |
-| `battery.percent`                     | `sensor` battery       |
-| `onlineStatus`                        | `binary_sensor` online |
+Setup still refuses an account with zero watches. After the entry exists, an empty poll is success: known watches go unavailable until their `imei` returns, and a newly paired watch gets entities on the next poll.
 
-`lastLocation.timestamp` is Unix **seconds**. `battery.updateTime` is often **milliseconds**.
+| Field                                 | Entity                          |
+| ------------------------------------- | ------------------------------- |
+| `lastLocation.lat` / `lon` / `radius` | `device_tracker`                |
+| `battery.percent`                     | `sensor` battery                |
+| `onlineStatus`                        | `binary_sensor` online          |
+| `lastLocation.timestamp`              | `sensor` last fix (diagnostic)  |
+| —                                     | `button` refresh location       |
+
+`lastLocation.timestamp` is Unix **seconds** (13-digit values are milliseconds). The tracker still exposes the raw value as `location_timestamp`. `battery.updateTime` is often **milliseconds**.
 
 ## 7. Re-verify after an app update
 

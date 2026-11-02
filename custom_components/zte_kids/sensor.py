@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
+    SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE
+from homeassistant.const import PERCENTAGE, EntityCategory
+from homeassistant.util import dt as dt_util
 
+from .coordinator import location_fix_epoch
 from .entity import ZteKidsEntity
 
 if TYPE_CHECKING:
@@ -25,6 +29,14 @@ BATTERY_DESCRIPTION = SensorEntityDescription(
     translation_key="battery",
     device_class=SensorDeviceClass.BATTERY,
     native_unit_of_measurement=PERCENTAGE,
+    state_class=SensorStateClass.MEASUREMENT,
+)
+
+LAST_FIX_DESCRIPTION = SensorEntityDescription(
+    key="last_fix",
+    translation_key="last_fix",
+    device_class=SensorDeviceClass.TIMESTAMP,
+    entity_category=EntityCategory.DIAGNOSTIC,
 )
 
 
@@ -33,22 +45,23 @@ async def async_setup_entry(
     entry: ZteKidsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up battery sensors."""
+    """Set up battery and last-fix sensors."""
     coordinator = entry.runtime_data.coordinator
     known: set[str] = set()
 
     def _add_new() -> None:
         if not coordinator.data:
             return
-        new: list[ZteKidsBatterySensor] = []
+        new: list[SensorEntity] = []
         for imei in coordinator.data:
             if imei in known:
                 continue
             known.add(imei)
             new.append(
-                ZteKidsBatterySensor(
-                    coordinator, imei, BATTERY_DESCRIPTION
-                )
+                ZteKidsBatterySensor(coordinator, imei, BATTERY_DESCRIPTION)
+            )
+            new.append(
+                ZteKidsLastFixSensor(coordinator, imei, LAST_FIX_DESCRIPTION)
             )
         if new:
             async_add_entities(new)
@@ -91,3 +104,26 @@ class ZteKidsBatterySensor(ZteKidsEntity, SensorEntity):
         if update_time is None:
             return {}
         return {"battery_update_time": update_time}
+
+
+class ZteKidsLastFixSensor(ZteKidsEntity, SensorEntity):
+    """Diagnostic timestamp of lastLocation for one watch."""
+
+    def __init__(
+        self,
+        coordinator: ZteKidsDataUpdateCoordinator,
+        imei: str,
+        description: SensorEntityDescription,
+    ) -> None:
+        """Initialize."""
+        super().__init__(coordinator, imei)
+        self.entity_description = description
+        self._attr_unique_id = f"{imei}_{description.key}"
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return the last fix as a timezone-aware datetime."""
+        ts = location_fix_epoch(self.device_data)
+        if ts is None:
+            return None
+        return dt_util.utc_from_timestamp(ts)

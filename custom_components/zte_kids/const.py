@@ -8,6 +8,7 @@ from typing import Final
 LOGGER: Logger = getLogger(__package__)
 
 DOMAIN: Final[str] = "zte_kids"
+SERVICE_REFRESH_LOCATION: Final[str] = "refresh_location"
 ATTRIBUTION: Final[str] = "Data provided by ZTE Kids (Nubia Care API)"
 
 CONF_REGION: Final[str] = "region"

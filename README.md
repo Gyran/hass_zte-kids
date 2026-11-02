@@ -2,7 +2,7 @@
 
 Unofficial [Home Assistant](https://www.home-assistant.io/) custom integration for **ZTE Kids** watches via the **Nubia Care** parent cloud API.
 
-**Entities:** `device_tracker` (location), battery `%`, online status.  
+**Entities:** `device_tracker` (location), battery `%`, online status, last location fix, refresh-location button.  
 **Setup:** config flow only (no custom Lovelace UI).
 
 > This is reverse-engineered and unsupported. It can break when Nubia changes the API. See [docs/REVERSE_ENGINEERING.md](docs/REVERSE_ENGINEERING.md).
@@ -33,13 +33,19 @@ Copy [`custom_components/zte_kids`](custom_components/zte_kids) into your HA `co
 
 One HA device per watch (`imei`):
 
-| Entity                   | Source                                |
-| ------------------------ | ------------------------------------- |
-| `device_tracker.*`       | `lastLocation.lat` / `lon` / `radius` |
-| `sensor.*_battery`       | `battery.percent`                     |
-| `binary_sensor.*_online` | `onlineStatus == 1`                   |
+| Entity                      | Source                                                        |
+| --------------------------- | ------------------------------------------------------------- |
+| `device_tracker.*`          | `lastLocation.lat` / `lon` / `radius`                         |
+| `sensor.*_battery`          | `battery.percent`                                             |
+| `binary_sensor.*_online`    | `onlineStatus == 1`                                           |
+| `sensor.*_last_location_fix`| `lastLocation.timestamp` (diagnostic)                         |
+| `button.*_refresh_location` | `POST location/last`, then poll until the timestamp changes   |
 
-Data comes from polling **related-device**. Invalid token (`1002`) triggers re-login; persistent failure starts reauth.
+Service `zte_kids.refresh_location` does the same thing as the button. In an automation, target the watch device or any of its entities. Several watches run one after another.
+
+Setup shows an error when the account has no watches, and does not create the entry. After setup, an empty poll does not fail the integration. A watch paired later shows up on the next poll.
+
+State comes from polling **related-device**. The refresh button and the service ask the watch for a new fix first. The POST response usually has no coordinates. Invalid token (`1002`) triggers re-login; persistent failure starts reauth.
 
 ## Repository layout
 

@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 from typing import Any
+from urllib.parse import urlencode
 
 import aiohttp
 
 from .constants import REGION_KEYS
-from .signing import append_signed_query
+from .signing import append_signed_query, signed_guard_params
 
 
 class ZteKidsError(Exception):
@@ -110,6 +111,54 @@ class ZteKidsClient:
                 f"related-device code {code}: {data.get('msg')}"
             )
         return data
+
+    async def async_request_location(self, imei: str) -> None:
+        """POST getway/devices/{imei}/location/last.
+
+        Asks the watch for a fresh fix. code 0 is success even when the body
+        has no lat/lon. Coordinates arrive on a later related-device poll.
+        """
+        imei = imei.strip()
+        body = {
+            "imei": imei,
+            "openid": self._openid,
+            "accesstoken": self._token,
+        }
+        guard = signed_guard_params(body, region=self._region)
+        url = (
+            f"{self._base}/getway/devices/{imei}/location/last?"
+            f"{urlencode(guard)}"
+        )
+        try:
+            async with self._websession.post(
+                url,
+                data=body,
+                headers={"Accept": "application/json"},
+                timeout=self._timeout,
+            ) as response:
+                text = await response.text()
+                try:
+                    data = json.loads(text) if text else {}
+                except json.JSONDecodeError as err:
+                    raise ZteKidsError(f"Invalid JSON: {text[:500]}") from err
+                if response.status >= 400:
+                    raise ZteKidsError(
+                        f"location/last HTTP {response.status}: {data}"
+                    )
+        except TimeoutError as err:
+            raise ZteKidsError(f"location/last request timed out: {err}") from err
+        except aiohttp.ClientError as err:
+            raise ZteKidsError(f"location/last request failed: {err}") from err
+
+        if not isinstance(data, dict):
+            raise ZteKidsError(f"location/last unexpected payload: {data}")
+        code = data.get("code")
+        if code == 1002:
+            raise ZteKidsAuthError(
+                f"location/last code {code}: {data.get('msg')}", code=1002
+            )
+        if code != 0:
+            raise ZteKidsError(f"location/last code {code}: {data.get('msg')}")
 
     @staticmethod
     def devices_by_imei(related: dict[str, Any]) -> dict[str, dict[str, Any]]:
