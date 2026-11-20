@@ -4,8 +4,9 @@
   "categories": ["presence_location.trackers"],
   "codeowners": ["@gyran"],
   "config_flow": true,
+  "connectivity": ["cloud"],
   "documentation": "https://github.com/Gyran/hass_zte-kids",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Gyran/hass_zte-kids/issues",
-  "version": "0.2.0"
+  "version": "0.2.1"
 }

@@ -7,20 +7,26 @@ Unofficial [Home Assistant](https://www.home-assistant.io/) custom integration f
 
 > This is reverse-engineered and unsupported. It can break when Nubia changes the API. See [docs/REVERSE_ENGINEERING.md](docs/REVERSE_ENGINEERING.md).
 
+Needs **Home Assistant 2026.11.1** or newer. That release ships Marketplace and blocks the old HACS custom integration.
+
+[![Open your Home Assistant instance and open a repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=Gyran&repository=hass_zte-kids&category=integration)
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=zte_kids)
 
-## Install (HACS custom repository)
+<!-- ha-marketplace:exclude-start -->
+## Install (Marketplace)
 
-Not submitted to the HACS default list / Marketplace — add as a **custom repository** only.
+Not in the default catalog. Add as a **custom repository**.
 
-1. HACS → Integrations → Custom repositories → add this GitHub repo (category: Integration)
-2. Install **ZTE Kids**
-3. Restart Home Assistant if prompted
-4. Settings → Devices & services → Add integration → **ZTE Kids** (or My link above after install)
+1. Settings → Marketplace → Add from link → `https://github.com/Gyran/hass_zte-kids` (or the Marketplace badge above). GitHub connection required for custom repos.
+2. Install **ZTE Kids**. Config flow loads without a restart on first install.
+3. Settings → Devices & services → Add integration → **ZTE Kids** (or the setup badge above).
+
+Updates show under Settings → Updates. Applying an update needs a restart; Marketplace files a repair for that.
 
 ## Install (manual)
 
 Copy [`custom_components/zte_kids`](custom_components/zte_kids) into your HA `config/custom_components/`, restart, then add **ZTE Kids** via the UI.
+<!-- ha-marketplace:exclude-end -->
 
 ## Configuration
 
@@ -41,7 +47,7 @@ One HA device per watch (`imei`):
 | `sensor.*_last_location_fix`| `lastLocation.timestamp` (diagnostic)                         |
 | `button.*_refresh_location` | `POST location/last`, then poll until the timestamp changes   |
 
-Service `zte_kids.refresh_location` does the same thing as the button. In an automation, target the watch device or any of its entities. Several watches run one after another.
+Service `zte_kids.refresh_location` does the same thing as the button. In an automation, target the watch device or any of its entities. Several watches refresh in parallel.
 
 Setup shows an error when the account has no watches, and does not create the entry. After setup, an empty poll does not fail the integration. A watch paired later shows up on the next poll.
 
@@ -54,7 +60,7 @@ hacs.json
 LICENSE
 README.md
 docs/REVERSE_ENGINEERING.md     # tracked RE notes
-custom_components/zte_kids/     # HA integration (HACS installs this)
+custom_components/zte_kids/     # HA integration (Marketplace installs this)
 scripts/                        # setup + develop only
 tests/manual/                   # API probe / smoke (not HA tooling)
 reverse_engineering/            # local APK/jadx/old CLIs (ignored except README)
@@ -80,3 +86,13 @@ Onboard and add **ZTE Kids** in the UI. Manual API/integration checks: [`tests/m
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Tests
+
+```bash
+python3.14 -m venv .venv-test
+.venv-test/bin/pip install -r requirements_test.txt
+.venv-test/bin/pytest
+```
+
+`pytest-homeassistant-custom-component` can lag the newest HA release, so tests may run on the previous HA version.

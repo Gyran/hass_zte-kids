@@ -10,7 +10,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
 )
 
-from .entity import ZteKidsEntity
+from .entity import ZteKidsEntity, setup_per_watch
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -27,32 +27,16 @@ ONLINE_DESCRIPTION = BinarySensorEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,  # noqa: ARG001
+    hass: HomeAssistant,
     entry: ZteKidsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up online binary sensors."""
-    coordinator = entry.runtime_data.coordinator
-    known: set[str] = set()
-
-    def _add_new() -> None:
-        if not coordinator.data:
-            return
-        new: list[ZteKidsOnlineBinarySensor] = []
-        for imei in coordinator.data:
-            if imei in known:
-                continue
-            known.add(imei)
-            new.append(
-                ZteKidsOnlineBinarySensor(
-                    coordinator, imei, ONLINE_DESCRIPTION
-                )
-            )
-        if new:
-            async_add_entities(new)
-
-    _add_new()
-    entry.async_on_unload(coordinator.async_add_listener(_add_new))
+    setup_per_watch(
+        entry,
+        async_add_entities,
+        lambda c, i: [ZteKidsOnlineBinarySensor(c, i, ONLINE_DESCRIPTION)],
+    )
 
 
 class ZteKidsOnlineBinarySensor(ZteKidsEntity, BinarySensorEntity):
@@ -70,6 +54,9 @@ class ZteKidsOnlineBinarySensor(ZteKidsEntity, BinarySensorEntity):
         self._attr_unique_id = f"{imei}_{description.key}"
 
     @property
-    def is_on(self) -> bool:
-        """Return True when onlineStatus is 1."""
-        return self.device_data.get("onlineStatus") == 1
+    def is_on(self) -> bool | None:
+        """Return True when onlineStatus is 1, None when the field is absent."""
+        status = self.device_data.get("onlineStatus")
+        if status is None:
+            return None
+        return status == 1

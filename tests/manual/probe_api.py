@@ -41,7 +41,7 @@ async def _async_main() -> int:
         return 1
 
     sys.path.insert(0, str(ROOT / "custom_components" / "zte_kids"))
-    from api import ZteKidsClient, async_login  # noqa: E402
+    from api import ZteKidsClient, async_login
 
     async with aiohttp.ClientSession() as websession:
         credentials = await async_login(

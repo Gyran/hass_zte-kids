@@ -1,0 +1,3 @@
+# Tests run on the HA version pinned by pytest-homeassistant-custom-component,
+# which can lag the newest HA release (0.13.375 pins 2026.10.4 at time of writing).
+pytest-homeassistant-custom-component

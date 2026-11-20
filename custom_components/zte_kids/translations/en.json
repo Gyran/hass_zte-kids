@@ -45,15 +45,10 @@
   "services": {
     "refresh_location": {
       "name": "Refresh location",
-      "description": "Ask each selected watch for a fresh GPS fix. Watches are refreshed one after another. Each one is polled for about 24 seconds, or until its location timestamp changes."
+      "description": "Ask each selected watch for a fresh GPS fix. Watches are refreshed in parallel. Each one is polled for about 24 seconds, or until its location timestamp changes."
     }
   },
   "entity": {
-    "device_tracker": {
-      "watch": {
-        "name": "Location"
-      }
-    },
     "sensor": {
       "battery": {
         "name": "Battery"

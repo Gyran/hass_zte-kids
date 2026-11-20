@@ -74,15 +74,17 @@ class ZteKidsDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any
             always_update=False,
         )
         self.client = client
+        self._login_lock = asyncio.Lock()
 
     async def _async_update_data(self) -> dict[str, dict[str, Any]]:
         """Poll related-device; re-login once on invalid token."""
+        stale = self.client.accesstoken
         try:
             return await self._async_fetch_devices()
         except ZteKidsAuthError as err:
             LOGGER.warning("Token invalid (%s); re-login", err)
             try:
-                await self._async_relogin()
+                await self._async_relogin(stale)
                 return await self._async_fetch_devices()
             except ZteKidsAuthError as auth_err:
                 raise ConfigEntryAuthFailed(auth_err) from auth_err
@@ -107,7 +109,7 @@ class ZteKidsDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any
         deadline = monotonic() + 24
         while monotonic() < deadline:
             await asyncio.sleep(8)
-            await self.async_request_refresh()
+            await self.async_refresh()
             after = location_fix_epoch((self.data or {}).get(imei) or {})
             if after is not None and after != before:
                 return
@@ -117,6 +119,7 @@ class ZteKidsDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any
 
     async def _async_request_location(self, imei: str) -> None:
         """POST location/last, re-login once on an invalid token."""
+        stale = self.client.accesstoken
         try:
             await self.client.async_request_location(imei)
         except ZteKidsAuthError as err:
@@ -124,7 +127,7 @@ class ZteKidsDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any
                 "Token invalid during location refresh (%s); re-login", err
             )
             try:
-                await self._async_relogin()
+                await self._async_relogin(stale)
                 await self.client.async_request_location(imei)
             except ZteKidsAuthError as auth_err:
                 raise ConfigEntryAuthFailed(auth_err) from auth_err
@@ -133,8 +136,18 @@ class ZteKidsDataUpdateCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any
         except ZteKidsError as err:
             raise UpdateFailed(err) from err
 
-    async def _async_relogin(self) -> None:
-        """Login with stored credentials and persist new session."""
+    async def _async_relogin(self, stale_token: str | None = None) -> None:
+        """Login with stored credentials and persist new session.
+
+        Serialized. When another caller already replaced the token that failed
+        (``stale_token``), the new token is reused instead of logging in again.
+        """
+        async with self._login_lock:
+            if stale_token is not None and self.client.accesstoken != stale_token:
+                return
+            await self._async_login_and_store()
+
+    async def _async_login_and_store(self) -> None:
         data = self.config_entry.data
         credentials = await async_login(
             data[CONF_EMAIL],

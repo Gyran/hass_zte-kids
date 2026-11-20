@@ -2,13 +2,43 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ATTRIBUTION, DOMAIN, MANUFACTURER
 from .coordinator import ZteKidsDataUpdateCoordinator
+
+if TYPE_CHECKING:
+    from homeassistant.helpers.entity import Entity
+    from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+
+    from .data import ZteKidsConfigEntry
+
+
+def setup_per_watch(
+    entry: ZteKidsConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+    factory: Callable[[ZteKidsDataUpdateCoordinator, str], list[Entity]],
+) -> None:
+    """Add entities for every watch now and for watches paired later."""
+    coordinator = entry.runtime_data.coordinator
+    known: set[str] = set()
+
+    def _add_new() -> None:
+        new: list[Entity] = []
+        for imei in coordinator.data or {}:
+            if imei in known:
+                continue
+            known.add(imei)
+            new.extend(factory(coordinator, imei))
+        if new:
+            async_add_entities(new)
+
+    _add_new()
+    entry.async_on_unload(coordinator.async_add_listener(_add_new))
 
 
 class ZteKidsEntity(CoordinatorEntity[ZteKidsDataUpdateCoordinator]):

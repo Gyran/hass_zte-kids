@@ -11,6 +11,9 @@ import aiohttp
 from .constants import REGION_KEYS
 from .signing import append_signed_query, signed_guard_params
 
+# Token invalid / expired. Login-time codes 1022 / 1132 are handled in login.py.
+AUTH_ERROR_CODES = (1002,)
+
 
 class ZteKidsError(Exception):
     """API returned an error or unexpected payload."""
@@ -73,6 +76,41 @@ class ZteKidsClient:
         """Shared aiohttp session (owned by Home Assistant)."""
         return self._websession
 
+    async def _async_request(
+        self, method: str, name: str, url: str, **kwargs: Any
+    ) -> dict[str, Any]:
+        """Send a request, decode JSON and map API codes to exceptions."""
+        try:
+            async with self._websession.request(
+                method,
+                url,
+                headers={"Accept": "application/json"},
+                timeout=self._timeout,
+                **kwargs,
+            ) as response:
+                text = await response.text()
+                try:
+                    data = json.loads(text) if text else {}
+                except json.JSONDecodeError as err:
+                    raise ZteKidsError(f"Invalid JSON: {text[:500]}") from err
+                if response.status >= 400:
+                    raise ZteKidsError(f"{name} HTTP {response.status}: {data}")
+        except TimeoutError as err:
+            raise ZteKidsError(f"{name} request timed out: {err}") from err
+        except aiohttp.ClientError as err:
+            raise ZteKidsError(f"{name} request failed: {err}") from err
+
+        if not isinstance(data, dict):
+            raise ZteKidsError(f"{name} unexpected payload: {data}")
+        code = data.get("code")
+        if code in AUTH_ERROR_CODES:
+            raise ZteKidsAuthError(
+                f"{name} code {code}: {data.get('msg')}", code=code
+            )
+        if code != 0:
+            raise ZteKidsError(f"{name} code {code}: {data.get('msg')}")
+        return data
+
     async def async_get_related_devices(self) -> dict[str, Any]:
         """GET getway/accounts/{openid}/related-device."""
         url = append_signed_query(
@@ -81,36 +119,7 @@ class ZteKidsClient:
             query_for_sign={"accesstoken": self._token},
             region=self._region,
         )
-        try:
-            async with self._websession.get(
-                url,
-                headers={"Accept": "application/json"},
-                timeout=self._timeout,
-            ) as response:
-                text = await response.text()
-                try:
-                    data = json.loads(text) if text else {}
-                except json.JSONDecodeError as err:
-                    raise ZteKidsError(f"Invalid JSON: {text[:500]}") from err
-                if response.status >= 400:
-                    raise ZteKidsError(
-                        f"related-device HTTP {response.status}: {data}"
-                    )
-        except TimeoutError as err:
-            raise ZteKidsError(f"related-device request timed out: {err}") from err
-        except aiohttp.ClientError as err:
-            raise ZteKidsError(f"related-device request failed: {err}") from err
-
-        code = data.get("code")
-        if code == 1002:
-            raise ZteKidsAuthError(
-                f"related-device code {code}: {data.get('msg')}", code=1002
-            )
-        if code != 0:
-            raise ZteKidsError(
-                f"related-device code {code}: {data.get('msg')}"
-            )
-        return data
+        return await self._async_request("GET", "related-device", url)
 
     async def async_request_location(self, imei: str) -> None:
         """POST getway/devices/{imei}/location/last.
@@ -129,36 +138,7 @@ class ZteKidsClient:
             f"{self._base}/getway/devices/{imei}/location/last?"
             f"{urlencode(guard)}"
         )
-        try:
-            async with self._websession.post(
-                url,
-                data=body,
-                headers={"Accept": "application/json"},
-                timeout=self._timeout,
-            ) as response:
-                text = await response.text()
-                try:
-                    data = json.loads(text) if text else {}
-                except json.JSONDecodeError as err:
-                    raise ZteKidsError(f"Invalid JSON: {text[:500]}") from err
-                if response.status >= 400:
-                    raise ZteKidsError(
-                        f"location/last HTTP {response.status}: {data}"
-                    )
-        except TimeoutError as err:
-            raise ZteKidsError(f"location/last request timed out: {err}") from err
-        except aiohttp.ClientError as err:
-            raise ZteKidsError(f"location/last request failed: {err}") from err
-
-        if not isinstance(data, dict):
-            raise ZteKidsError(f"location/last unexpected payload: {data}")
-        code = data.get("code")
-        if code == 1002:
-            raise ZteKidsAuthError(
-                f"location/last code {code}: {data.get('msg')}", code=1002
-            )
-        if code != 0:
-            raise ZteKidsError(f"location/last code {code}: {data.get('msg')}")
+        await self._async_request("POST", "location/last", url, data=body)
 
     @staticmethod
     def devices_by_imei(related: dict[str, Any]) -> dict[str, dict[str, Any]]:

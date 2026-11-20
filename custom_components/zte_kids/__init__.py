@@ -24,6 +24,7 @@ from .services import async_setup_services, async_unload_services
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.device_registry import DeviceEntry
 
     from .data import ZteKidsConfigEntry
 
@@ -54,7 +55,6 @@ async def async_setup_entry(
     await coordinator.async_config_entry_first_refresh()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     async_setup_services(hass)
     LOGGER.debug(
         "ZTE Kids setup for %s (%s devices)",
@@ -64,11 +64,17 @@ async def async_setup_entry(
     return True
 
 
-async def _async_update_listener(
-    hass: HomeAssistant, entry: ZteKidsConfigEntry
-) -> None:
-    """Reload when options / entry data change."""
-    await hass.config_entries.async_reload(entry.entry_id)
+async def async_remove_config_entry_device(
+    hass: HomeAssistant,
+    entry: ZteKidsConfigEntry,
+    device_entry: DeviceEntry,
+) -> bool:
+    """Allow removing a watch the account no longer lists."""
+    current = entry.runtime_data.coordinator.data or {}
+    return not any(
+        domain == DOMAIN and imei in current
+        for domain, imei in device_entry.identifiers
+    )
 
 
 async def async_unload_entry(

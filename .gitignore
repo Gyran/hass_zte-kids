@@ -38,3 +38,4 @@ config/configuration.yaml
 # OS
 .DS_Store
 Thumbs.db
+.venv-test/

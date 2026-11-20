@@ -5,9 +5,9 @@ from .constants import REGION_KEYS
 from .login import async_login
 
 __all__ = [
+    "REGION_KEYS",
     "ZteKidsAuthError",
     "ZteKidsClient",
     "ZteKidsError",
-    "REGION_KEYS",
     "async_login",
 ]

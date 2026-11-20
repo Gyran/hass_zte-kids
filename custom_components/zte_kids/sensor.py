@@ -15,7 +15,7 @@ from homeassistant.const import PERCENTAGE, EntityCategory
 from homeassistant.util import dt as dt_util
 
 from .coordinator import location_fix_epoch
-from .entity import ZteKidsEntity
+from .entity import ZteKidsEntity, setup_per_watch
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -41,33 +41,19 @@ LAST_FIX_DESCRIPTION = SensorEntityDescription(
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,  # noqa: ARG001
+    hass: HomeAssistant,
     entry: ZteKidsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up battery and last-fix sensors."""
-    coordinator = entry.runtime_data.coordinator
-    known: set[str] = set()
-
-    def _add_new() -> None:
-        if not coordinator.data:
-            return
-        new: list[SensorEntity] = []
-        for imei in coordinator.data:
-            if imei in known:
-                continue
-            known.add(imei)
-            new.append(
-                ZteKidsBatterySensor(coordinator, imei, BATTERY_DESCRIPTION)
-            )
-            new.append(
-                ZteKidsLastFixSensor(coordinator, imei, LAST_FIX_DESCRIPTION)
-            )
-        if new:
-            async_add_entities(new)
-
-    _add_new()
-    entry.async_on_unload(coordinator.async_add_listener(_add_new))
+    setup_per_watch(
+        entry,
+        async_add_entities,
+        lambda c, i: [
+            ZteKidsBatterySensor(c, i, BATTERY_DESCRIPTION),
+            ZteKidsLastFixSensor(c, i, LAST_FIX_DESCRIPTION),
+        ],
+    )
 
 
 class ZteKidsBatterySensor(ZteKidsEntity, SensorEntity):

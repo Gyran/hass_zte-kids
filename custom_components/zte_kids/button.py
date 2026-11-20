@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from homeassistant.components.button import ButtonEntity
 
-from .entity import ZteKidsEntity
+from .entity import ZteKidsEntity, setup_per_watch
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -17,28 +17,16 @@ if TYPE_CHECKING:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,  # noqa: ARG001
+    hass: HomeAssistant,
     entry: ZteKidsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up a refresh button for each watch."""
-    coordinator = entry.runtime_data.coordinator
-    known: set[str] = set()
-
-    def _add_new() -> None:
-        if not coordinator.data:
-            return
-        new: list[ZteKidsRefreshLocationButton] = []
-        for imei in coordinator.data:
-            if imei in known:
-                continue
-            known.add(imei)
-            new.append(ZteKidsRefreshLocationButton(coordinator, imei))
-        if new:
-            async_add_entities(new)
-
-    _add_new()
-    entry.async_on_unload(coordinator.async_add_listener(_add_new))
+    setup_per_watch(
+        entry,
+        async_add_entities,
+        lambda c, i: [ZteKidsRefreshLocationButton(c, i)],
+    )
 
 
 class ZteKidsRefreshLocationButton(ZteKidsEntity, ButtonEntity):

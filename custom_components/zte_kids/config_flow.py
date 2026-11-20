@@ -152,8 +152,8 @@ class ZteKidsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> config_entries.ConfigFlowResult:
         """Dialog to re-enter password.
 
-        Update entry data and abort; add_update_listener reloads.
-        (Avoid async_update_reload_and_abort with listeners — warned for 2026.12.)
+        Updates entry data and reloads the entry. No update listener is
+        registered, so token refreshes elsewhere never trigger a reload.
         """
         errors: dict[str, str] = {}
         reauth_entry = self._get_reauth_entry()
@@ -179,10 +179,9 @@ class ZteKidsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     LOGGER.error("Reauth connection error: %s", err)
                     errors["base"] = "connection"
                 else:
-                    self.hass.config_entries.async_update_entry(
+                    return self.async_update_reload_and_abort(
                         reauth_entry,
-                        data={
-                            **reauth_entry.data,
+                        data_updates={
                             CONF_PASSWORD: password,
                             CONF_ACCESSTOKEN: credentials["accesstoken"],
                             CONF_OPENID: credentials["openid"],
@@ -190,7 +189,6 @@ class ZteKidsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             CONF_REGION: credentials["region"],
                         },
                     )
-                    return self.async_abort(reason="reauth_successful")
 
         return self.async_show_form(
             step_id="reauth_confirm",
@@ -218,8 +216,8 @@ class ZteKidsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return ZteKidsOptionsFlow()
 
 
-class ZteKidsOptionsFlow(config_entries.OptionsFlow):
-    """Handle options (scan interval)."""
+class ZteKidsOptionsFlow(config_entries.OptionsFlowWithReload):
+    """Handle options (scan interval). Reloads the entry when options change."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None

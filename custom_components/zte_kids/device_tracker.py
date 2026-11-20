@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.device_tracker import SourceType, TrackerEntity
 
-from .entity import ZteKidsEntity
+from .entity import ZteKidsEntity, setup_per_watch
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -17,28 +17,12 @@ if TYPE_CHECKING:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,  # noqa: ARG001
+    hass: HomeAssistant,
     entry: ZteKidsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up device trackers for each watch."""
-    coordinator = entry.runtime_data.coordinator
-    known: set[str] = set()
-
-    def _add_new() -> None:
-        if not coordinator.data:
-            return
-        new: list[ZteKidsTracker] = []
-        for imei in coordinator.data:
-            if imei in known:
-                continue
-            known.add(imei)
-            new.append(ZteKidsTracker(coordinator, imei))
-        if new:
-            async_add_entities(new)
-
-    _add_new()
-    entry.async_on_unload(coordinator.async_add_listener(_add_new))
+    setup_per_watch(entry, async_add_entities, lambda c, i: [ZteKidsTracker(c, i)])
 
 
 def _as_float(value: Any) -> float | None:
